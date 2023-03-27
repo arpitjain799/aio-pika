@@ -9,7 +9,7 @@ from pamqp.common import Arguments
 
 from .abc import (
     AbstractIncomingMessage, AbstractQueue, AbstractQueueIterator, ConsumerTag,
-    TimeoutType, get_exchange_name,
+    TimeoutType, get_exchange_name, AbstractChannel,
 )
 from .exceptions import QueueEmpty
 from .exchange import ExchangeParamType
@@ -35,7 +35,7 @@ class Queue(AbstractQueue):
 
     def __init__(
         self,
-        channel: aiormq.abc.AbstractChannel,
+        channel: AbstractChannel,
         name: Optional[str],
         durable: bool,
         exclusive: bool,
@@ -75,7 +75,8 @@ class Queue(AbstractQueue):
         :return: :class:`None`
         """
         log.debug("Declaring queue: %r", self)
-        self.declaration_result = await self.channel.queue_declare(
+        channel = await self.channel.get_underlay_channel()
+        self.declaration_result = await channel.queue_declare(
             queue=self.name,
             durable=self.durable,
             exclusive=self.exclusive,
@@ -128,7 +129,8 @@ class Queue(AbstractQueue):
             arguments,
         )
 
-        return await self.channel.queue_bind(
+        channel = await self.channel.get_underlay_channel()
+        return await channel.queue_bind(
             self.name,
             exchange=get_exchange_name(exchange),
             routing_key=routing_key,
@@ -166,7 +168,8 @@ class Queue(AbstractQueue):
             arguments,
         )
 
-        return await self.channel.queue_unbind(
+        channel = await self.channel.get_underlay_channel()
+        return await channel.queue_unbind(
             queue=self.name,
             exchange=get_exchange_name(exchange),
             routing_key=routing_key,
@@ -208,7 +211,8 @@ class Queue(AbstractQueue):
 
         log.debug("Start to consuming queue: %r", self)
 
-        consume_result = await self.channel.basic_consume(
+        channel = await self.channel.get_underlay_channel()
+        consume_result = await channel.basic_consume(
             queue=self.name,
             consumer_callback=partial(
                 consumer,
@@ -252,7 +256,8 @@ class Queue(AbstractQueue):
         :return: Basic.CancelOk when operation completed successfully
         """
 
-        return await self.channel.basic_cancel(
+        channel = await self.channel.get_underlay_channel()
+        return await channel.basic_cancel(
             consumer_tag=consumer_tag, nowait=nowait, timeout=timeout,
         )
 
@@ -271,7 +276,8 @@ class Queue(AbstractQueue):
         :return: :class:`aio_pika.message.IncomingMessage`
         """
 
-        msg: DeliveredMessage = await self.channel.basic_get(
+        channel = await self.channel.get_underlay_channel()
+        msg: DeliveredMessage = await channel.basic_get(
             self.name, no_ack=no_ack, timeout=timeout,
         )
 
@@ -294,7 +300,8 @@ class Queue(AbstractQueue):
 
         log.info("Purging queue: %r", self)
 
-        return await self.channel.queue_purge(
+        channel = await self.channel.get_underlay_channel()
+        return await channel.queue_purge(
             self.name, nowait=no_wait, timeout=timeout,
         )
 
@@ -313,7 +320,8 @@ class Queue(AbstractQueue):
 
         log.info("Deleting %r", self)
 
-        return await self.channel.queue_delete(
+        channel = await self.channel.get_underlay_channel()
+        return await channel.queue_delete(
             self.name,
             if_unused=if_unused,
             if_empty=if_empty,
