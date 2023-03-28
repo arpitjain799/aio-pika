@@ -1,3 +1,25 @@
+9.1.0
+-----
+
+The bulk of the changes are related to how the library entities are now
+interconnected. In previous versions of `aio_pika.Channel` instances not
+contains a link to the `aio_pika.Connection` instances for now is contains it.
+
+While I don't want custom code to work directly with the `aiormq.Channel`
+instance, this was a public API and I should warn you about the change here.
+The `aio_pika.Channel.channel` property is deprecated. Use
+`aio_pika.Channel.get_underlay_chanel()` instead.
+Now all library entities already use this method.
+
+
+
+9.0.5
+-----
+
+* Fixes in **kwargs parameters #531
+* Update example code of rpc tutorial #530
+* Amend Exchange.__repr__ to include class name #527
+
 9.0.3
 -----
 
